@@ -1,48 +1,68 @@
 """
-Database Schemas
+Database Schemas for Charity App
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
+Each Pydantic model name maps to a MongoDB collection using the lowercase
+class name (e.g., Donation -> "donation").
 
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Collections required:
+- donations
+- contacts
+- patients
+- filesHistory
+- users (for authentication/roles)
 """
+from typing import Optional, Literal, List
+from pydantic import BaseModel, Field, EmailStr
 
-from pydantic import BaseModel, Field
-from typing import Optional
-
-# Example schemas (replace with your own):
-
+# Users (Authentication + Roles)
 class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
     name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    email: EmailStr = Field(..., description="Unique email address")
+    password_hash: str = Field(..., description="BCrypt password hash")
+    role: Literal["Admin", "Manager", "Salesperson"] = Field("Salesperson", description="Role-based access")
+    is_active: bool = Field(True)
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+# Contact form submissions
+class Contact(BaseModel):
+    name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    message: str
 
-# Add your own schemas here:
-# --------------------------------------------------
+# Patients contacted by the team
+class Patient(BaseModel):
+    name: str
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    notes: Optional[str] = None
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+# History of files sent to patients
+class Fileshistory(BaseModel):
+    patient_name: str
+    patient_email: Optional[EmailStr] = None
+    patient_phone: Optional[str] = None
+    file_name: str
+    file_path: Optional[str] = None
+    sent_via: Literal["email", "whatsapp"]
+    status: Literal["queued", "sent", "failed"] = "sent"
+    error: Optional[str] = None
+
+# Donations
+class Donation(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    amount: float = Field(..., gt=0)
+    currency: Literal["INR", "USD", "EUR", "GBP"] = "INR"
+    transaction_id: Optional[str] = None
+    country: Optional[str] = None
+    method: Optional[Literal["upi", "netbanking", "card", "stripe"]] = None
+    status: Literal["initiated", "success", "failed"] = "initiated"
+    receipt_url: Optional[str] = None
+
+# Optional: Simple testimonial model if needed for future
+class Testimonial(BaseModel):
+    name: str
+    story: str
+    source: Optional[str] = Field(None, description="Instagram/Facebook link")
+    amount_raised: Optional[float] = None
